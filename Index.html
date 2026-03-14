@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한국 장기</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0e6d2;
+            color: #4a3b2a;
+        }
+
+        h1 {
+            color: #8a6d4a;
+        }
+
+        #game-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        #board-container {
+            position: relative;
+        }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(9, 60px);
+            grid-template-rows: repeat(10, 60px);
+            background-color: #f3d9b2;
+            border: 2px solid #333;
+            width: calc(9 * 60px);
+            height: calc(10 * 60px);
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            box-sizing: border-box;
+            border-right: 1px solid #8a6d4a;
+            border-bottom: 1px solid #8a6d4a;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* Remove outer borders for clean grid lines */
+        .square:nth-child(9n) { border-right: none; }
+        .square:nth-child(n+82) { border-bottom: none; }
+
+        /* Palace diagonal lines using pseudo-elements on the container */
+        #board-container::before, #board-container::after {
+            content: '';
+            position: absolute;
+            pointer-events: none;
+            border: 1px solid #8a6d4a;
+            width: calc(2 * 60px);
+            height: calc(2 * 60px);
+            left: calc(3 * 60px);
+        }
+
+        /* Top Palace */
+        #board-container::before {
+            top: 0;
+            background:
+                linear-gradient(to bottom right, transparent 49%, #8a6d4a 49% 51%, transparent 51%),
+                linear-gradient(to top right, transparent 49%, #8a6d4a 49% 51%, transparent 51%);
+        }
+
+        /* Bottom Palace */
+        #board-container::after {
+            top: calc(7 * 60px);
+            background:
+                linear-gradient(to bottom right, transparent 49%, #8a6d4a 49% 51%, transparent 51%),
+                linear-gradient(to top right, transparent 49%, #8a6d4a 49% 51%, transparent 51%);
+        }
+
+        .piece {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            font-weight: bold;
+            border: 2px solid #5a4b3a;
+            user-select: none;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .cho {
+            background-color: #00a0e9;
+            color: white;
+            border-color: #004d70;
+        }
+
+        .han {
+            background-color: #e60012;
+            color: white;
+            border-color: #730009;
+        }
+
+        .square.selected .piece {
+            box-shadow: 0 0 10px 5px #ffeb3b;
+        }
+
+        .valid-move {
+            background-color: rgba(76, 175, 80, 0.5);
+            border-radius: 50%;
+        }
+
+        #info-panel {
+            width: 220px;
+            background-color: #fff8e1;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #info-panel h2 {
+            margin-top: 0;
+            color: #8a6d4a;
+            border-bottom: 2px solid #e0c8a0;
+            padding-bottom: 5px;
+        }
+
+        #message {
+            color: #d32f2f;
+            font-weight: bold;
+            min-height: 40px;
+        }
+    </style>
+</head>
+<body>
+    <h1>한국 장기</h1>
+    <div id="game-container">
+        <div id="board-container">
+            <div id="board"></div>
+        </div>
+        <div id="info-panel">
+            <h2>게임 정보</h2>
+            <p>현재 턴: <span id="current-turn"></span></p>
+            <p id="message"></p>
+            <button onclick="initializeGame()">게임 다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const currentTurnElement = document.getElementById('current-turn');
+        const messageElement = document.getElementById('message');
+
+        const ROWS = 10;
+        const COLS = 9;
+
+        const pieceNames = {
+            'cha': '車', 'ma': '馬', 'sang': '象', 'sa': '士',
+            'gung': '宮', 'po': '包', 'byeong': '兵', 'jol': '卒'
+        };
+
+        const initialBoard = [
+            ['cha-h', 'ma-h', 'sang-h', 'sa-h', null, 'sa-h', 'sang-h', 'ma-h', 'cha-h'],
+            [null, null, null, null, 'gung-h', null, null, null, null],
+            [null, 'po-h', null, null, null, null, null, 'po-h', null],
+            ['byeong-h', null, 'byeong-h', null, 'byeong-h', null, 'byeong-h', null, 'byeong-h'],
+            [null, null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, null, null, null, null],
+            ['jol-c', null, 'jol-c', null, 'jol-c', null, 'jol-c', null, 'jol-c'],
+            [null, 'po-c', null, null, null, null, null, 'po-c', null],
+            [null, null, null, null, 'gung-c', null, null, null, null],
+            ['cha-c', 'ma-c', 'sang-c', 'sa-c', null, 'sa-c', 'sang-c', 'ma-c', 'cha-c']
+        ];
+
+        let board = [];
+        let currentPlayer = 'c'; // c for Cho (blue), h for Han (red)
+        let selectedPiece = null; // { row, col, piece }
+        let validMoves = [];
+
+        function initializeGame() {
+            board = JSON.parse(JSON.stringify(initialBoard));
+            currentPlayer = 'c';
+            selectedPiece = null;
+            validMoves = [];
+            renderBoard();
+            updateInfo();
+            messageElement.textContent = '';
+        }
+
+        function renderBoard() {
+            boardElement.innerHTML = '';
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const square = document.createElement('div');
+                    square.classList.add('square');
+                    square.dataset.row = r;
+                    square.dataset.col = c;
+                    square.addEventListener('click', () => handleSquareClick(r, c));
+
+                    const pieceStr = board[r][c];
+                    if (pieceStr) {
+                        const [type, color] = pieceStr.split('-');
+                        const pieceElement = document.createElement('div');
+                        pieceElement.classList.add('piece', color === 'c' ? 'cho' : 'han');
+                        
+                        let pieceChar;
+                        if (type === 'gung') {
+                            pieceChar = color === 'c' ? '楚' : '漢';
+                        } else {
+                            pieceChar = pieceNames[type];
+                        }
+                        
+                        pieceElement.textContent = pieceChar;
+                        square.appendChild(pieceElement);
+                    }
+                    boardElement.appendChild(square);
+                }
+            }
+            highlightSelections();
+        }
+
+        function highlightSelections() {
+            document.querySelectorAll('.square.selected, .square.valid-move').forEach(s => {
+                s.classList.remove('selected', 'valid-move');
+            });
+
+            if (selectedPiece) {
+                const selectedSquare = boardElement.querySelector(`.square[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col}']`);
+                if (selectedSquare) selectedSquare.classList.add('selected');
+            }
+
+            validMoves.forEach(([r, c]) => {
+                const moveSquare = boardElement.querySelector(`.square[data-row='${r}'][data-col='${c}']`);
+                if (moveSquare) moveSquare.classList.add('valid-move');
+            });
+        }
+
+        function handleSquareClick(row, col) {
+            const clickedPieceStr = board[row][col];
+            const clickedPieceColor = clickedPieceStr ? clickedPieceStr.split('-')[1] : null;
+
+            if (selectedPiece) {
+                const isMoveValid = validMoves.some(([r, c]) => r === row && c === col);
+                if (isMoveValid) {
+                    movePiece(selectedPiece.row, selectedPiece.col, row, col);
+                    selectedPiece = null;
+                    validMoves = [];
+                    currentPlayer = currentPlayer === 'c' ? 'h' : 'c';
+                    messageElement.textContent = '';
+                } else if (clickedPieceColor === currentPlayer) {
+                    selectPiece(row, col);
+                } else {
+                    selectedPiece = null;
+                    validMoves = [];
+                    messageElement.textContent = '잘못된 움직임입니다.';
+                }
+            } else {
+                if (clickedPieceColor === currentPlayer) {
+                    selectPiece(row, col);
+                }
+            }
+            
+            renderBoard();
+            updateInfo();
+        }
+
+        function selectPiece(row, col) {
+            const pieceStr = board[row][col];
+            selectedPiece = { row, col, piece: pieceStr };
+            validMoves = getValidMoves(row, col, pieceStr);
+            messageElement.textContent = '';
+        }
+
+        function movePiece(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            const capturedPiece = board[toRow][toCol];
+            if (capturedPiece) {
+                // Capture logic can be expanded here
+            }
+            board[toRow][toCol] = piece;
+            board[fromRow][fromCol] = null;
+        }
+
+        function getValidMoves(row, col, pieceStr) {
+            const [type, color] = pieceStr.split('-');
+            switch (type) {
+                case 'cha': return getChaMoves(row, col, color);
+                case 'ma': return getMaMoves(row, col, color);
+                case 'sa': case 'gung': return getPalaceMoves(row, col, color);
+                case 'byeong': case 'jol': return getPawnMoves(row, col, color);
+                case 'po':
+                    messageElement.textContent = '포(包)의 움직임은 아직 구현되지 않았습니다.';
+                    return [];
+                case 'sang':
+                    messageElement.textContent = '상(象)의 움직임은 아직 구현되지 않았습니다.';
+                    return [];
+                default: return [];
+            }
+        }
+
+        function isOpponent(r, c, myColor) {
+            const piece = board[r][c];
+            return piece && piece.split('-')[1] !== myColor;
+        }
+
+        function isEmpty(r, c) { return board[r][c] === null; }
+
+        function getChaMoves(row, col, color) {
+            const moves = [];
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of dirs) {
+                let r = row + dr, c = col + dc;
+                while (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                    if (isEmpty(r, c)) { moves.push([r, c]); } 
+                    else {
+                        if (isOpponent(r, c, color)) moves.push([r, c]);
+                        break;
+                    }
+                    r += dr; c += dc;
+                }
+            }
+            // Palace diagonal moves
+            const palace = (color === 'h') ? {r_min:0, r_max:2, c_min:3, c_max:5} : {r_min:7, r_max:9, c_min:3, c_max:5};
+            const palaceCenter = [palace.r_min + 1, palace.c_min + 1];
+            const palaceCorners = [[palace.r_min, palace.c_min], [palace.r_min, palace.c_max], [palace.r_max, palace.c_min], [palace.r_max, palace.c_max]];
+            const isAtPalacePos = (r, c) => palaceCorners.some(([pr, pc]) => pr === r && pc === c) || (r === palaceCenter[0] && c === palaceCenter[1]);
+            
+            if (isAtPalacePos(row, col)) {
+                [...palaceCorners, palaceCenter].forEach(([pr, pc]) => {
+                    if (pr !== row || pc !== col) {
+                        if (isEmpty(pr, pc) || isOpponent(pr, pc, color)) moves.push([pr, pc]);
+                    }
+                });
+            }
+            return moves;
+        }
+
+        function getMaMoves(row, col, color) {
+            const moves = [];
+            const potentialMoves = [[-2, -1], [-2, 1], [2, -1], [2, 1], [-1, -2], [1, -2], [-1, 2], [1, 2]];
+            for (const [dr, dc] of potentialMoves) {
+                const r = row + dr, c = col + dc;
+                if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                    let isBlocked = false;
+                    if (Math.abs(dr) === 2) { // Vertical part is longer
+                        if (!isEmpty(row + Math.sign(dr), col)) isBlocked = true;
+                    } else { // Horizontal part is longer
+                        if (!isEmpty(row, col + Math.sign(dc))) isBlocked = true;
+                    }
+                    if (!isBlocked && (isEmpty(r, c) || isOpponent(r, c, color))) moves.push([r, c]);
+                }
+            }
+            return moves;
+        }
+
+        function getPalaceMoves(row, col, color) {
+            const moves = [];
+            const palace = (color === 'h') ? {r_min:0, r_max:2, c_min:3, c_max:5} : {r_min:7, r_max:9, c_min:3, c_max:5};
+            const potentialMoves = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+            for (const [dr, dc] of potentialMoves) {
+                const r = row + dr, c = col + dc;
+                if (r >= palace.r_min && r <= palace.r_max && c >= palace.c_min && c <= palace.c_max) {
+                    if (isEmpty(r, c) || isOpponent(r, c, color)) moves.push([r, c]);
+                }
+            }
+            return moves;
+        }
+
+        function getPawnMoves(row, col, color) {
+            const moves = [];
+            const forward = color === 'c' ? -1 : 1;
+            const potential = [[forward, 0], [0, -1], [0, 1]];
+            potential.forEach(([dr, dc]) => {
+                const r = row + dr, c = col + dc;
+                if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                    if (isEmpty(r, c) || isOpponent(r, c, color)) moves.push([r, c]);
+                }
+            });
+            return moves;
+        }
+
+        function updateInfo() {
+            currentTurnElement.textContent = currentPlayer === 'c' ? '초(楚)' : '한(漢)';
+            currentTurnElement.style.color = currentPlayer === 'c' ? '#00a0e9' : '#e60012';
+        }
+
+        // Initial game start
+        initializeGame();
+    </script>
+</body>
+</html>
