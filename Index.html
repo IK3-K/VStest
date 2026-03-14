@@ -3,49 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>장기</title>
+    <title>장기 게임</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            background-color: #f0e6d2;
-            background-color: #d2b48c;
+            background-color: #f4f4f4;
             color: #4a3b2a;
+            margin: 0;
+            padding: 20px;
         }
 
         h1 {
-            color: #8a6d4a;
+            color: #333;
+            margin-bottom: 20px;
         }
 
         #game-container {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
             gap: 30px;
         }
 
         #board-container {
             position: relative;
+            padding: 30px;
+            background-color: #dcb35c;
+            border-radius: 5px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
         }
 
         #board {
             display: grid;
             grid-template-columns: repeat(9, 60px);
             grid-template-rows: repeat(10, 60px);
-            background-color: #f3d9b2;
-            border: 2px solid #333;
             width: calc(9 * 60px);
             height: calc(10 * 60px);
+            position: relative;
         }
 
         .square {
             width: 60px;
             height: 60px;
             box-sizing: border-box;
-            border-right: 1px solid #8a6d4a;
-            border-bottom: 1px solid #8a6d4a;
             position: relative;
             display: flex;
             justify-content: center;
@@ -53,106 +57,156 @@
             cursor: pointer;
         }
 
-        /* Remove outer borders for clean grid lines */
-        .square:nth-child(9n) { border-right: none; }
-        .square:nth-child(n+82) { border-bottom: none; }
+        /* Draw grid lines through the center of the square */
+        .square::before { /* Horizontal line */
+            content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 2px; background-color: #333; z-index: 0;
+        }
+        .square::after { /* Vertical line */
+            content: ''; position: absolute; left: 50%; top: 0; height: 100%; width: 2px; background-color: #333; z-index: 0;
+        }
+
+        /* Handle board edges so lines don't extend outside */
+        .square[data-col="0"]::before { left: 50%; width: 50%; }
+        .square[data-col="8"]::before { width: 50%; }
+        .square[data-row="0"]::after { top: 50%; height: 50%; }
+        .square[data-row="9"]::after { height: 50%; }
+
+        /* Board outline border connecting the grid endpoints */
+        #board::before {
+            content: '';
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            width: 479px; /* (9-1)*60 - 1px correction */
+            height: 539px; /* (10-1)*60 - 1px correction */
+            border: 2px solid #333;
+            pointer-events: none;
+        }
 
         /* Palace diagonal lines using pseudo-elements on the container */
         #board-container::before, #board-container::after {
             content: '';
             position: absolute;
             pointer-events: none;
-            border: 1px solid #8a6d4a;
-            width: calc(2 * 60px);
-            height: calc(2 * 60px);
-            left: calc(3 * 60px);
+            border: 2px solid #333;
+            width: 120px;
+            height: 120px;
+            left: 240px; /* 30px padding + 3.5*60 */
+            z-index: 1;
         }
 
         /* Top Palace */
         #board-container::before {
-            top: 0;
+            top: 60px; /* 30px padding + 0.5 * 60 */
             background:
-                linear-gradient(to bottom right, transparent 49%, #8a6d4a 49% 51%, transparent 51%),
-                linear-gradient(to top right, transparent 49%, #8a6d4a 49% 51%, transparent 51%);
+                linear-gradient(to bottom right, transparent 48%, #333 48% 52%, transparent 52%),
+                linear-gradient(to top right, transparent 48%, #333 48% 52%, transparent 52%);
         }
 
         /* Bottom Palace */
         #board-container::after {
-            top: calc(7 * 60px);
+            top: 480px; /* 30px padding + 7.5 * 60 */
             background:
-                linear-gradient(to bottom right, transparent 49%, #8a6d4a 49% 51%, transparent 51%),
-                linear-gradient(to top right, transparent 49%, #8a6d4a 49% 51%, transparent 51%);
+                linear-gradient(to bottom right, transparent 48%, #333 48% 52%, transparent 52%),
+                linear-gradient(to top right, transparent 48%, #333 48% 52%, transparent 52%);
         }
 
         .piece {
-            width: 52px;
-            height: 52px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 30px;
+            font-size: 28px;
             font-weight: bold;
-            border: 2px solid #5a4b3a;
+            background-color: #fff;
+            border: 2px solid #999;
             user-select: none;
             z-index: 10;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            font-family: "Hanja", serif;
+        }
+
+        .piece.large {
+            width: 56px;
+            height: 56px;
+            font-size: 34px;
         }
 
         .cho {
-            background-color: #00a0e9;
-            color: white;
-            border-color: #004d70;
+            color: #0044cc; /* Blue text */
+            border-color: #0044cc;
         }
 
         .han {
-            background-color: #e60012;
-            color: white;
-            border-color: #730009;
+            color: #cc0000; /* Red text */
+            border-color: #cc0000;
         }
 
         .square.selected .piece {
-            box-shadow: 0 0 10px 5px #ffeb3b;
+            background-color: #fffacd;
+            border-color: #ff9800;
+            box-shadow: 0 0 10px #ff9800;
+            transform: scale(1.1);
+            transition: transform 0.1s;
         }
 
         .valid-move {
-            background-color: rgba(76, 175, 80, 0.5);
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(0, 128, 0, 0.6);
             border-radius: 50%;
+            z-index: 5;
         }
 
         #info-panel {
-            width: 220px;
-            background-color: #fff8e1;
-            padding: 15px;
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff;
+            padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
         }
 
         #info-panel h2 {
             margin-top: 0;
-            color: #8a6d4a;
-            border-bottom: 2px solid #e0c8a0;
-            padding-bottom: 5px;
         }
 
         #message {
             color: #d32f2f;
             font-weight: bold;
             min-height: 40px;
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4a3b2a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #63503a;
         }
     </style>
 </head>
 <body>
-    <h1>장기</h1>
+    <h1>장기 게임</h1>
     <div id="game-container">
         <div id="board-container">
             <div id="board"></div>
         </div>
         <div id="info-panel">
-            <h2>게임 정보</h2>
-            <p>현재 턴: <span id="current-turn"></span></p>
+            <p>현재 차례: <span id="current-turn" style="font-weight:bold;"></span></p>
             <p id="message"></p>
-            <button onclick="initializeGame()">게임 다시 시작</button>
+            <button onclick="initializeGame()">새 게임 시작</button>
         </div>
     </div>
 
@@ -164,13 +218,15 @@
         const ROWS = 10;
         const COLS = 9;
 
+        // 기물 이름 및 한자 매핑
         const pieceNames = {
             'cha': '車', 'ma': '馬', 'sang': '象', 'sa': '士',
             'gung': '宮', 'po': '包', 'byeong': '兵', 'jol': '卒'
         };
 
+        // 초기 배치 (상마상마 배치 - 안상차림)
         const initialBoard = [
-            ['cha-h', 'ma-h', 'sang-h', 'sa-h', null, 'sa-h', 'sang-h', 'ma-h', 'cha-h'],
+            ['cha-h', 'ma-h', 'sang-h', 'sa-h', null, 'sa-h', 'sang-h', 'ma-h', 'cha-h'], // 한(漢)
             [null, null, null, null, 'gung-h', null, null, null, null],
             [null, 'po-h', null, null, null, null, null, 'po-h', null],
             ['byeong-h', null, 'byeong-h', null, 'byeong-h', null, 'byeong-h', null, 'byeong-h'],
@@ -179,18 +235,18 @@
             ['jol-c', null, 'jol-c', null, 'jol-c', null, 'jol-c', null, 'jol-c'],
             [null, 'po-c', null, null, null, null, null, 'po-c', null],
             [null, null, null, null, 'gung-c', null, null, null, null],
-            ['cha-c', 'ma-c', 'sang-c', 'sa-c', null, 'sa-c', 'sang-c', 'ma-c', 'cha-c']
+            ['cha-c', 'ma-c', 'sang-c', 'sa-c', null, 'sa-c', 'sang-c', 'ma-c', 'cha-c'] // 초(楚)
         ];
 
         let board = [];
         let currentPlayer = 'c'; // c for Cho (blue), h for Han (red)
-        let selectedPiece = null; // { row, col, piece }
+        let selectedPos = null; // { row, col }
         let validMoves = [];
 
         function initializeGame() {
             board = JSON.parse(JSON.stringify(initialBoard));
-            currentPlayer = 'c';
-            selectedPiece = null;
+            currentPlayer = 'c'; // 초나라 선공
+            selectedPos = null;
             validMoves = [];
             renderBoard();
             updateInfo();
@@ -207,12 +263,21 @@
                     square.dataset.col = c;
                     square.addEventListener('click', () => handleSquareClick(r, c));
 
+                    // 이동 가능 표시
+                    if (validMoves.some(m => m[0] === r && m[1] === c)) {
+                        const marker = document.createElement('div');
+                        marker.classList.add('valid-move');
+                        square.appendChild(marker);
+                    }
+
                     const pieceStr = board[r][c];
                     if (pieceStr) {
                         const [type, color] = pieceStr.split('-');
                         const pieceElement = document.createElement('div');
                         pieceElement.classList.add('piece', color === 'c' ? 'cho' : 'han');
                         
+                        if (type === 'gung') pieceElement.classList.add('large');
+
                         let pieceChar;
                         if (type === 'gung') {
                             pieceChar = color === 'c' ? '楚' : '漢';
@@ -223,48 +288,46 @@
                         pieceElement.textContent = pieceChar;
                         square.appendChild(pieceElement);
                     }
+                    
+                    if (selectedPos && selectedPos.row === r && selectedPos.col === c) {
+                        square.classList.add('selected');
+                    }
+
                     boardElement.appendChild(square);
                 }
             }
-            highlightSelections();
-        }
-
-        function highlightSelections() {
-            document.querySelectorAll('.square.selected, .square.valid-move').forEach(s => {
-                s.classList.remove('selected', 'valid-move');
-            });
-
-            if (selectedPiece) {
-                const selectedSquare = boardElement.querySelector(`.square[data-row='${selectedPiece.row}'][data-col='${selectedPiece.col}']`);
-                if (selectedSquare) selectedSquare.classList.add('selected');
-            }
-
-            validMoves.forEach(([r, c]) => {
-                const moveSquare = boardElement.querySelector(`.square[data-row='${r}'][data-col='${c}']`);
-                if (moveSquare) moveSquare.classList.add('valid-move');
-            });
         }
 
         function handleSquareClick(row, col) {
             const clickedPieceStr = board[row][col];
             const clickedPieceColor = clickedPieceStr ? clickedPieceStr.split('-')[1] : null;
 
-            if (selectedPiece) {
+            // 이미 선택된 기물이 있는 경우 (이동 시도)
+            if (selectedPos) {
+                // 같은 기물 클릭 시 선택 해제
+                if (selectedPos.row === row && selectedPos.col === col) {
+                    selectedPos = null;
+                    validMoves = [];
+                    renderBoard();
+                    return;
+                }
+
                 const isMoveValid = validMoves.some(([r, c]) => r === row && c === col);
                 if (isMoveValid) {
-                    movePiece(selectedPiece.row, selectedPiece.col, row, col);
-                    selectedPiece = null;
+                    movePiece(selectedPos.row, selectedPos.col, row, col);
+                    selectedPos = null;
                     validMoves = [];
                     currentPlayer = currentPlayer === 'c' ? 'h' : 'c';
                     messageElement.textContent = '';
                 } else if (clickedPieceColor === currentPlayer) {
+                    // 내 다른 기물 선택 변경
                     selectPiece(row, col);
                 } else {
-                    selectedPiece = null;
-                    validMoves = [];
+                    // 이동 불가 위치 클릭
                     messageElement.textContent = '잘못된 움직임입니다.';
                 }
             } else {
+                // 기물 선택
                 if (clickedPieceColor === currentPlayer) {
                     selectPiece(row, col);
                 }
@@ -276,20 +339,26 @@
 
         function selectPiece(row, col) {
             const pieceStr = board[row][col];
-            selectedPiece = { row, col, piece: pieceStr };
+            selectedPos = { row, col };
             validMoves = getValidMoves(row, col, pieceStr);
             messageElement.textContent = '';
         }
 
         function movePiece(fromRow, fromCol, toRow, toCol) {
             const piece = board[fromRow][fromCol];
-            const capturedPiece = board[toRow][toCol];
-            if (capturedPiece) {
-                // Capture logic can be expanded here
-            }
             board[toRow][toCol] = piece;
             board[fromRow][fromCol] = null;
         }
+
+        // ---- 이동 규칙 로직 ----
+
+        function isOpponent(r, c, myColor) {
+            const piece = board[r][c];
+            return piece && piece.split('-')[1] !== myColor;
+        }
+
+        function isEmpty(r, c) { return board[r][c] === null; }
+        function isValidPos(r, c) { return r >= 0 && r < ROWS && c >= 0 && c < COLS; }
 
         function getValidMoves(row, col, pieceStr) {
             const [type, color] = pieceStr.split('-');
@@ -298,29 +367,19 @@
                 case 'ma': return getMaMoves(row, col, color);
                 case 'sa': case 'gung': return getPalaceMoves(row, col, color);
                 case 'byeong': case 'jol': return getPawnMoves(row, col, color);
-                case 'po':
-                    messageElement.textContent = '포(包)의 움직임은 아직 구현되지 않았습니다.';
-                    return [];
-                case 'sang':
-                    messageElement.textContent = '상(象)의 움직임은 아직 구현되지 않았습니다.';
-                    return [];
+                case 'po': return getPoMoves(row, col, color);
+                case 'sang': return getSangMoves(row, col, color);
                 default: return [];
             }
         }
 
-        function isOpponent(r, c, myColor) {
-            const piece = board[r][c];
-            return piece && piece.split('-')[1] !== myColor;
-        }
-
-        function isEmpty(r, c) { return board[r][c] === null; }
-
         function getChaMoves(row, col, color) {
             const moves = [];
             const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            // 직선 이동
             for (const [dr, dc] of dirs) {
                 let r = row + dr, c = col + dc;
-                while (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                while (isValidPos(r, c)) {
                     if (isEmpty(r, c)) { moves.push([r, c]); } 
                     else {
                         if (isOpponent(r, c, color)) moves.push([r, c]);
@@ -329,69 +388,221 @@
                     r += dr; c += dc;
                 }
             }
-            // Palace diagonal moves
-            const palace = (color === 'h') ? {r_min:0, r_max:2, c_min:3, c_max:5} : {r_min:7, r_max:9, c_min:3, c_max:5};
-            const palaceCenter = [palace.r_min + 1, palace.c_min + 1];
-            const palaceCorners = [[palace.r_min, palace.c_min], [palace.r_min, palace.c_max], [palace.r_max, palace.c_min], [palace.r_max, palace.c_max]];
-            const isAtPalacePos = (r, c) => palaceCorners.some(([pr, pc]) => pr === r && pc === c) || (r === palaceCenter[0] && c === palaceCenter[1]);
+            // 궁성 안 대각선 이동
+            addPalaceDiagonalMoves(row, col, color, moves, true);
+            return moves;
+        }
+
+        function getPoMoves(row, col, color) {
+            const moves = [];
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
             
-            if (isAtPalacePos(row, col)) {
-                [...palaceCorners, palaceCenter].forEach(([pr, pc]) => {
-                    if (pr !== row || pc !== col) {
-                        if (isEmpty(pr, pc) || isOpponent(pr, pc, color)) moves.push([pr, pc]);
+            for (const [dr, dc] of dirs) {
+                let r = row + dr, c = col + dc;
+                let hurdleFound = false;
+
+                while (isValidPos(r, c)) {
+                    if (!hurdleFound) {
+                        if (!isEmpty(r, c)) {
+                            // 첫 번째 기물을 만남 (발판)
+                            // 발판이 '포'이면 넘을 수 없음 (한국 장기 룰)
+                            if (board[r][c].startsWith('po')) break;
+                            hurdleFound = true;
+                        }
+                    } else {
+                        // 발판을 넘은 후
+                        if (isEmpty(r, c)) {
+                            moves.push([r, c]);
+                        } else {
+                            // 도착지에 기물이 있음
+                            // 적이고, '포'가 아니면 잡을 수 있음
+                            if (isOpponent(r, c, color) && !board[r][c].startsWith('po')) {
+                                moves.push([r, c]);
+                            }
+                            break; // 기물을 만나면 더 이상 이동 불가
+                        }
                     }
-                });
+                    r += dr; c += dc;
+                }
             }
+            // 궁성 대각선 포 이동 (구현 복잡도를 위해 여기선 직선 위주로만 처리하거나 단순화)
+            // 한국 장기에서 포는 궁성 대각선으로도 다리를 놓아 뛸 수 있음.
+            // 여기서는 기본 직선 이동만 구현합니다.
             return moves;
         }
 
         function getMaMoves(row, col, color) {
             const moves = [];
-            const potentialMoves = [[-2, -1], [-2, 1], [2, -1], [2, 1], [-1, -2], [1, -2], [-1, 2], [1, 2]];
-            for (const [dr, dc] of potentialMoves) {
-                const r = row + dr, c = col + dc;
-                if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
-                    let isBlocked = false;
-                    if (Math.abs(dr) === 2) { // Vertical part is longer
-                        if (!isEmpty(row + Math.sign(dr), col)) isBlocked = true;
-                    } else { // Horizontal part is longer
-                        if (!isEmpty(row, col + Math.sign(dc))) isBlocked = true;
+            // 상하좌우 1칸 + 대각선 1칸
+            const dirs = [[-1,0], [1,0], [0,-1], [0,1]]; // 멱 확인 방향
+            const diags = [[-1,-1], [-1,1], [1,-1], [1,1]]; // 최종 방향
+
+            // 마의 이동: 직선 1칸(멱)이 비어있어야 함 -> 그 방향의 대각선 2곳
+            // 북쪽 멱
+            if (isValidPos(row-1, col) && isEmpty(row-1, col)) {
+                checkDest(row-2, col-1, moves, color);
+                checkDest(row-2, col+1, moves, color);
+            }
+            // 남쪽 멱
+            if (isValidPos(row+1, col) && isEmpty(row+1, col)) {
+                checkDest(row+2, col-1, moves, color);
+                checkDest(row+2, col+1, moves, color);
+            }
+            // 서쪽 멱
+            if (isValidPos(row, col-1) && isEmpty(row, col-1)) {
+                checkDest(row-1, col-2, moves, color);
+                checkDest(row+1, col-2, moves, color);
+            }
+            // 동쪽 멱
+            if (isValidPos(row, col+1) && isEmpty(row, col+1)) {
+                checkDest(row-1, col+2, moves, color);
+                checkDest(row+1, col+2, moves, color);
+            }
+            return moves;
+        }
+
+        function getSangMoves(row, col, color) {
+            const moves = [];
+            // 상의 이동: 직선 1칸(멱1) 비고 -> 대각선 1칸(멱2) 비고 -> 대각선 1칸(도착)
+            const checks = [
+                { p1: [-1,0], p2: [-2,-1], dst: [-3,-2] }, // 상좌
+                { p1: [-1,0], p2: [-2,1],  dst: [-3,2]  }, // 상우
+                { p1: [1,0],  p2: [2,-1],  dst: [3,-2]  }, // 하좌
+                { p1: [1,0],  p2: [2,1],   dst: [3,2]   }, // 하우
+                { p1: [0,-1], p2: [-1,-2], dst: [-2,-3] }, // 좌상
+                { p1: [0,-1], p2: [1,-2],  dst: [2,-3]  }, // 좌하
+                { p1: [0,1],  p2: [-1,2],  dst: [-2,3]  }, // 우상
+                { p1: [0,1],  p2: [1,2],   dst: [2,3]   }  // 우하
+            ];
+
+            for (const check of checks) {
+                const r1 = row + check.p1[0], c1 = col + check.p1[1]; // 멱1
+                const r2 = row + check.p2[0], c2 = col + check.p2[1]; // 멱2
+                const r3 = row + check.dst[0], c3 = col + check.dst[1]; // 도착
+
+                if (isValidPos(r3, c3)) {
+                    if (isEmpty(r1, c1) && isEmpty(r2, c2)) {
+                        if (isEmpty(r3, c3) || isOpponent(r3, c3, color)) {
+                            moves.push([r3, c3]);
+                        }
                     }
-                    if (!isBlocked && (isEmpty(r, c) || isOpponent(r, c, color))) moves.push([r, c]);
                 }
             }
             return moves;
         }
 
+        function checkDest(r, c, moves, color) {
+            if (isValidPos(r, c)) {
+                if (isEmpty(r, c) || isOpponent(r, c, color)) {
+                    moves.push([r, c]);
+                }
+            }
+        }
+
         function getPalaceMoves(row, col, color) {
             const moves = [];
             const palace = (color === 'h') ? {r_min:0, r_max:2, c_min:3, c_max:5} : {r_min:7, r_max:9, c_min:3, c_max:5};
-            const potentialMoves = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
-            for (const [dr, dc] of potentialMoves) {
+            
+            // 직선 이동 (상하좌우)
+            const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            for (const [dr, dc] of dirs) {
                 const r = row + dr, c = col + dc;
                 if (r >= palace.r_min && r <= palace.r_max && c >= palace.c_min && c <= palace.c_max) {
                     if (isEmpty(r, c) || isOpponent(r, c, color)) moves.push([r, c]);
                 }
             }
+            
+            // 대각선 이동 (궁성 간선)
+            addPalaceDiagonalMoves(row, col, color, moves, false);
+            
             return moves;
+        }
+
+        function addPalaceDiagonalMoves(row, col, color, moves, isCha) {
+            const palace = (color === 'h') ? {r_min:0, r_max:2, c_min:3, c_max:5} : {r_min:7, r_max:9, c_min:3, c_max:5};
+            const center = [palace.r_min + 1, palace.c_min + 1];
+            
+            // 궁성 내 대각선 좌표 정의
+            // (0,3)-(2,5) 연결, (0,5)-(2,3) 연결
+            const corners = [
+                [palace.r_min, palace.c_min], [palace.r_min, palace.c_max],
+                [palace.r_max, palace.c_min], [palace.r_max, palace.c_max]
+            ];
+
+            const isAtPalacePos = (r, c) => palaceCorners.some(([pr, pc]) => pr === r && pc === c) || (r === palaceCenter[0] && c === palaceCenter[1]);
+            
+            // 현재 위치가 중앙이면 네 귀퉁이로 갈 수 있음
+            if (row === center[0] && col === center[1]) {
+                corners.forEach(([r, c]) => {
+                    if (isEmpty(r, c) || isOpponent(r, c, color)) moves.push([r, c]);
+                });
+            } 
+            // 현재 위치가 귀퉁이면 중앙으로 갈 수 있음
+            else {
+                // 귀퉁이인지 확인
+                const isCorner = corners.some(([r, c]) => r === row && c === col);
+                if (isCorner) {
+                    const [cr, cc] = center;
+                    if (isEmpty(cr, cc) || isOpponent(cr, cc, color)) {
+                        moves.push([cr, cc]);
+                        
+                        // 차(Cha)는 중앙을 지나 반대편까지 한 번에 갈 수 있음
+                        if (isCha && isEmpty(cr, cc)) {
+                            const dr = center[0] - row;
+                            const dc = center[1] - col;
+                            const farR = center[0] + dr;
+                            const farC = center[1] + dc;
+                            if (isEmpty(farR, farC) || isOpponent(farR, farC, color)) {
+                                moves.push([farR, farC]);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         function getPawnMoves(row, col, color) {
             const moves = [];
             const forward = color === 'c' ? -1 : 1;
             const potential = [[forward, 0], [0, -1], [0, 1]];
+            
+            // 일반 이동
             potential.forEach(([dr, dc]) => {
                 const r = row + dr, c = col + dc;
-                if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+                if (isValidPos(r, c)) {
                     if (isEmpty(r, c) || isOpponent(r, c, color)) moves.push([r, c]);
                 }
             });
+            
+            // 졸/병도 궁성 내 대각선 이동 가능
+            const palace = (color === 'h') ? {r_min:0, r_max:2, c_min:3, c_max:5} : {r_min:7, r_max:9, c_min:3, c_max:5};
+            const center = [palace.r_min + 1, palace.c_min + 1];
+            
+            // 궁성 귀퉁이 -> 중앙으로 대각선 이동 (전진 방향만)
+            if ((color === 'h' && row < center[0]) || (color === 'c' && row > center[0])) {
+                 // 대각선 진입 가능 여부 확인 (간략화: 현재 위치가 궁성 귀퉁이면 중앙으로 가능)
+                 const corners = [[palace.r_min, palace.c_min], [palace.r_min, palace.c_max], [palace.r_max, palace.c_min], [palace.r_max, palace.c_max]];
+                 if (corners.some(([r,c]) => r===row && c===col)) {
+                     if (isEmpty(center[0], center[1]) || isOpponent(center[0], center[1], color)) {
+                         moves.push([center[0], center[1]]);
+                     }
+                 }
+            }
+            // 중앙 -> 전진 대각선 (간략화)
+            if (row === center[0] && col === center[1]) {
+                const forwardDiagonals = color === 'c' ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
+                forwardDiagonals.forEach(([dr, dc]) => {
+                    const r = row + dr, c = col + dc;
+                    if (isEmpty(r, c) || isOpponent(r, c, color)) moves.push([r, c]);
+                });
+            }
+
             return moves;
         }
 
         function updateInfo() {
-            currentTurnElement.textContent = currentPlayer === 'c' ? '초(楚)' : '한(漢)';
-            currentTurnElement.style.color = currentPlayer === 'c' ? '#00a0e9' : '#e60012';
+            currentTurnElement.textContent = currentPlayer === 'c' ? '초(楚) - 파랑' : '한(漢) - 빨강';
+            currentTurnElement.style.color = currentPlayer === 'c' ? '#0044cc' : '#cc0000';
         }
 
         // Initial game start
