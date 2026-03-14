@@ -242,12 +242,14 @@
         let currentPlayer = 'c'; // c for Cho (blue), h for Han (red)
         let selectedPos = null; // { row, col }
         let validMoves = [];
+        let gameOver = false;
 
         function initializeGame() {
             board = JSON.parse(JSON.stringify(initialBoard));
             currentPlayer = 'c'; // 초나라 선공
             selectedPos = null;
             validMoves = [];
+            gameOver = false;
             renderBoard();
             updateInfo();
             messageElement.textContent = '';
@@ -299,6 +301,11 @@
         }
 
         function handleSquareClick(row, col) {
+            if (gameOver) {
+                messageElement.textContent = '게임이 종료되었습니다. "새 게임 시작"을 눌러주세요.';
+                return;
+            }
+
             const clickedPieceStr = board[row][col];
             const clickedPieceColor = clickedPieceStr ? clickedPieceStr.split('-')[1] : null;
 
@@ -314,7 +321,21 @@
 
                 const isMoveValid = validMoves.some(([r, c]) => r === row && c === col);
                 if (isMoveValid) {
-                    movePiece(selectedPos.row, selectedPos.col, row, col);
+                    const capturedPiece = board[row][col]; // 이동할 위치에 있는 기물을 확인
+                    movePiece(selectedPos.row, selectedPos.col, row, col); // 기물 이동
+
+                    // 왕을 잡았는지 확인
+                    if (capturedPiece && capturedPiece.startsWith('gung')) {
+                        gameOver = true;
+                        const winnerName = currentPlayer === 'c' ? '초(楚)' : '한(漢)';
+                        messageElement.textContent = `게임 종료! ${winnerName}의 승리입니다!`;
+                        currentTurnElement.textContent = "게임 종료";
+                        selectedPos = null;
+                        validMoves = [];
+                        renderBoard(); // 마지막 상태를 렌더링
+                        return;
+                    }
+
                     selectedPos = null;
                     validMoves = [];
                     currentPlayer = currentPlayer === 'c' ? 'h' : 'c';
@@ -333,8 +354,10 @@
                 }
             }
             
-            renderBoard();
-            updateInfo();
+            if (!gameOver) {
+                renderBoard();
+                updateInfo();
+            }
         }
 
         function selectPiece(row, col) {
